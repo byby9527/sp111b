@@ -80,4 +80,10 @@ if (fork() == 0) {
         }
     }
 '''
+### TCP與UDP的差異:
+
 ![](https://drive.google.com/uc?export=view&id=11JsO1jg0-jVonzWSI-u0uC_WbxMY0SB7)
+
+
+
+

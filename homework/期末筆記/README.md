@@ -86,5 +86,15 @@ if (fork() == 0) {
 ![](https://drive.google.com/uc?export=view&id=11JsO1jg0-jVonzWSI-u0uC_WbxMY0SB7)
 
 
+### 當Argc==1時，不用打參數，因為是為了要檢查
+```
+if(Argc==1) --> ./chat
+if(Argc==2) -->./chat 127.0.0.1
+```
+### c語言缺點: 使用的套件常常不能掛平台，幾乎都是跟作業系統綁在一起，即使是sqlite普遍的套件也沒辦法直接掛在作業系統。
+### c語言優點，可以使用作業系統上任何的函數，速度快。
+
+
+
 
 

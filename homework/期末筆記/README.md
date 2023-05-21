@@ -41,7 +41,7 @@ printf("receive: %s from client addr %s\n", msg, inet_ntoa(raddr.sin_addr));
 
 ## 02-軟體/07-系統程式/08-ipcchat/06-tcp/chat.c:
 
-### TCP必須做listena這個動作，當對方的請求連線進來後，通過accept接受後，連線就開始建立，因為TCP是連線導向協定，直到斷線為止，此連線會一直存在，在client端方面，要用connect接受，在server端對應的是accept，
+### TCP必須做listena這個動作，當對方的請求連線進來後，通過accept接受後，連線就開始建立，因為TCP是連線導向協定，直到斷線為止，此連線會一直存在，在client端方面，要用connect接受，在server端對應的是accept。
 
 ```
 if (argc==1) { // server

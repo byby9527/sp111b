@@ -4,6 +4,7 @@
 ### 任何ID進來的封包都會接收
 '''
  saddr.sin_addr.s_addr = INADDR_ANY;
+ 
 '''
 
 ### 取得此結構的長度 ，sizeof在c語言中很常會運用到

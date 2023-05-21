@@ -104,8 +104,67 @@ if(Argc==2) -->./chat 127.0.0.1
 ### RV32V:向量擴展(SIMD)指令
 ### RV64G:RISC-V的64位地址版本
 
+### RV32I 是必備的指令集，其他都可不支援。
+
+### 以下是其指令與格式如下所式：
+![](https://github.com/riscv2os/riscv2os/wiki/img/rv32i1.png)
+
 ## RISC-V 指令格式:
 ![](https://github.com/riscv2os/riscv2os/wiki/img/riscv_format32_2.png)
+### 立即值的部分有時被分散成幾區，像是 S-Type 分為 imm[4:0]+imm[11:5]，而 B,J 等類型的指令，imm 被分為更多部分，這主要是為了相容與擴充性的考量，在用 Verilog 或 VHDL 設計電路時可以用 decoder 先將立即值組合成單一欄位，然後才開始執行該指令。
 
 
+## hackcpu指令:
 
+### A指令:功能為把一個數值傳送到cpu中的A暫存器，第一個為0就是A指令
+### C指令:前面為111後面都是C指令
+
+## 壓縮指令集:
+
+### 為了提升RISC-V 處理器具有商業競爭力，指令集支援了壓縮模式，如果最後2碼aa 不是 11，那就是16位元的指令，反之，就是32位元以上指令。
+
+
+## 浮點指令集:
+
+### 由第一行來決定是什麼指令，但有時候是第四行，所以1和4行要互相比較是否是一樣的
+
+### 以下是單精度浮點指令 RV32F 的格式表:
+![](https://github.com/riscv2os/riscv2os/wiki/img/rv32f.png)
+
+### 雙精度 RV32D 的格式類似，如下表所示:
+![](https://github.com/riscv2os/riscv2os/wiki/img/rv32d.png)
+
+
+## 原子指令集:
+
+### 作業系統為了讓 thread 或 process 能共享變數卻不會產生競爭情況，處理完再歸還回去，此時需要 RV32A《原子指令集》的支援。
+
+### 其指令格式如下:
+
+![](https://github.com/riscv2os/riscv2os/wiki/img/rv32a.png)
+### 有時候編譯器為了速度起見，會調整一些指令的順序，這叫做錯序執行。但可能會造成問題，因此RISC-V 提供了 Fence.i 這樣的指令來避免錯誤產生。
+### 如圖:
+![](https://github.com/riscv2os/riscv2os/wiki/img/rvzext.png)
+
+
+## 64 位元指令集:
+### 對於 64 位元的架構，其基本指令和 32 位元相同，指令也仍然是 32 位元的架構，但是暫存器卻是 64 位元的。
+## 如圖:
+![](https://github.com/riscv2os/riscv2os/wiki/img/rv64isa.png)
+### 上圖中的 word 代表 32 位元整數，doubleword 代表 64 位元整數。
+
+
+## 假指令:
+### 由於 RISC-V 的指令集相當精簡，因此其他處理器上具備的指令，在 RISC-V 不見得有對應的指令，就會有假指令的存在
+
+### 如圖顯示，第一行是假指令，其中la rd=auipc rd，la其實是不存在，但必須用auipc rd來合成，需要假指令是因為進auipc rd這指令有效位元數不足，才會分成2個指令。
+
+![](https://github.com/riscv2os/riscv2os/wiki/img/pseudo1.png)
+
+
+### 如圖顯示， RISC-V 沒有移動 (mv) 之類的指令，mv是指暫存器的移動，使用 addi rs, rd, 0 這樣的指令可以做到mv移動，rd=rs+0，就等於移動。
+
+![](https://github.com/riscv2os/riscv2os/wiki/img/pseudo2.png)
+
+
+1.36.40

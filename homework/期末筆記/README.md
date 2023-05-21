@@ -122,7 +122,7 @@ if(Argc==2) -->./chat 127.0.0.1
 ## 壓縮指令集:
 
 ### 為了提升RISC-V 處理器具有商業競爭力，指令集支援了壓縮模式，如果最後2碼aa 不是 11，那就是16位元的指令，反之，就是32位元以上指令。
-
+![](https://github.com/riscv2os/riscv2os/wiki/img/riscv_format.png)
 
 ## 浮點指令集:
 

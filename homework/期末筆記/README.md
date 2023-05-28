@@ -222,5 +222,78 @@ stacks:
     .skip STACK_SIZE                # 分配堆疊空間
 ```
 
+## 04-TimerInterrupt:
+### Build & Run:
+### 此程式是顯示出timer_handler(時間中斷)從1開始直接按下Ctrl-A and then X才會離開程式，每個間隔約0.1秒，以達到實現時間中斷的目的
+```
+$ make
+riscv64-unknown-elf-gcc -nostdlib -fno-builtin -mcmodel=medany -march=rv32ima -mabi=ilp32 -T os.ld -o os.elf start.s sys.s lib.c timer.c os.c
+$ make qemu
+Press Ctrl-A and then X to exit QEMU
+qemu-system-riscv32 -nographic -smp 4 -machine virt -bios none -kernel os.elf        
+OS start
+timer_handler: 1
+timer_handler: 2
+timer_handler: 3
+timer_handler: 4
+timer_handler: 5
+QEMU: Terminated
+```
 
+### mini-riscv-os/04-TimerInterrupt/os.c:
+### 此程式會產生無窮迴圈，一直顯示timer_handler:
+```
+#include "os.h"
 
+int os_main(void)
+{
+	lib_puts("OS start\n");
+	timer_init(); // 開始時間中斷
+	while (1) {} //每次時間到就會觸發中斷
+	return 0;
+}
+
+```
+
+### mini-riscv-os/04-TimerInterrupt/timer.c:
+### 
+```
+#include "timer.h"
+
+#define interval 10000000 // cycles; about 1 second in qemu.
+
+void timer_init()
+{
+  // each CPU has a separate source of timer interrupts.
+  int id = r_mhartid();
+
+  // ask the CLINT for a timer interrupt.
+  *(reg_t*)CLINT_MTIMECMP(id) = *(reg_t*)CLINT_MTIME + interval;
+
+  // set the machine-mode trap handler.
+  w_mtvec((reg_t)sys_timer);   //然後再呼叫timer_handle
+
+  // enable machine-mode interrupts.
+  w_mstatus(r_mstatus() | MSTATUS_MIE);
+
+  // enable machine-mode timer interrupts.
+  w_mie(r_mie() | MIE_MTIE);
+}
+
+static int timer_count = 0;
+
+reg_t timer_handler(reg_t epc, reg_t cause)
+{
+  reg_t return_pc = epc;
+  // disable machine-mode timer interrupts.
+  w_mie(~((~r_mie()) | (1 << 7)));
+  lib_printf("timer_handler: %d\n", ++timer_count); //先加再執行，從1開始
+  int id = r_mhartid();
+  *(reg_t *)CLINT_MTIMECMP(id) = *(reg_t *)CLINT_MTIME + interval; //設置下次中斷時間點，中斷時會呼叫sys_timer(第14行)
+  // enable machine-mode timer interrupts.
+  w_mie(r_mie() | MIE_MTIE);
+  return return_pc;
+}
+```
+
+49.00

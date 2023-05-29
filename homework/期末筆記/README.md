@@ -375,5 +375,48 @@ static inline void w_mtvec(reg_t x)  #mtvec指中斷向量，中斷向量儲存�
 }
 剩下的部分都是為了暫存器的某些位元而使用的
 ```
+## 此圖片在講自己的CPU本身有一套的暫存器，裡面有ra、sp...等，sys_switch所做的事情是把自己的CPU暫存器儲存到old裡，再把new新載入到自己的CPU裡。
 ![](https://drive.google.com/uc?export=view&id=1IvsigljeEKAmyJ7-amC4cSenbPgvwqW_)
 
+### 電腦可以計時的原因，主要是因為主機板上會放石英振盪器來計時，其優點是很準時。
+### mini-riscv-os/05-Preemptive0/timer.c:
+```
+#include "timer.h"
+// a scratch area per CPU for machine-mode timer interrupts.
+reg_t timer_scratch[NCPU][5];
+#define interval 20000000 // cycles; about 2 second in qemu.
+void timer_init()  #基本上跟04的部分差不多，只是有多一點暫存的功能
+{
+  int id = r_mhartid();
+  *(reg_t *)CLINT_MTIMECMP(id) = *(reg_t *)CLINT_MTIME + interval;
+  reg_t *scratch = &timer_scratch[id][0];
+  scratch[3] = CLINT_MTIMECMP(id);
+  scratch[4] = interval;
+  w_mscratch((reg_t)scratch);
+  // enable machine-mode timer interrupts.
+  w_mie(r_mie() | MIE_MTIE);
+}
+static int timer_count = 0;
+void timer_handler()
+{
+  lib_printf("timer_handler: %d\n", ++timer_count);
+  int id = r_mhartid();
+  *(reg_t *)CLINT_MTIMECMP(id) = *(reg_t *)CLINT_MTIME + interval;
+}
+```
+### mini-riscv-os/05-Preemptive0/trap.c:
+### 這邊的trap是指所有中斷但不包含軟體中斷
+```
+void trap_init()
+{
+  // set the machine-mode trap handler.
+  w_mtvec((reg_t)trap_vector); #把trap_vector寫入並設定中斷向量
+
+  // enable machine-mode interrupts.
+  w_mstatus(r_mstatus() | MSTATUS_MIE);  #允許中斷
+}
+
+
+
+```
+2.01.47

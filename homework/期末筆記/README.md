@@ -1,3 +1,15 @@
+### &代表取它的位置，*ptr = &va代表把var的位置塞給ptr，一個指標是指儲存位置的東西
+```
+int var = 4;
+int *ptr = &var;
+```
+
+第2周 9.25
+
+
+
+
+
 ## 02-軟體/07-系統程式/08-ipcchat/05-udp/chat2.c:
 
 
@@ -406,6 +418,7 @@ void timer_handler()
 ```
 ### mini-riscv-os/05-Preemptive0/trap.c:
 ### 這邊的trap是指所有中斷但不包含軟體中斷
+
 ```
 void trap_init()
 {
@@ -416,7 +429,85 @@ void trap_init()
   w_mstatus(r_mstatus() | MSTATUS_MIE);  #允許中斷
 }
 
+reg_t trap_handler(reg_t epc, reg_t cause)   #中斷一發生會呼叫trap_handle
+{
+  reg_t return_pc = epc;
+  reg_t cause_code = cause & 0xfff;
 
+  if (cause & 0x80000000)
+  {
+    /* Asynchronous trap - interrupt */
+    switch (cause_code)
+    {
+    case 3:
+      lib_puts("software interruption!\n"); #軟體中斷，但這邊不會處理
+      break;
+    case 7:  #設定好這些之後，當中斷發生時，就會呼叫trap_handler，會呼叫是因為有在trap_init設定了中斷發生時呼叫trap_handler，這跟時間中斷的設定是一樣的，把trap_vector設定上去。
+    lib_puts("timer interruption!\n"); #時間中斷
+      // disable machine-mode timer interrupts.  
+      w_mie(~((~r_mie()) | (1 << 7))); #禁止時間中斷，為了避免重複中斷
+      timer_handler(); #timer_handler呼叫後
+      return_pc = (reg_t)&os_kernel; #至於這邊為什麼要把 return_pc設定成os_kernel，最後再傳回去，要看trap_handler那邊
+      // enable machine-mode timer interrupts.
+      w_mie(r_mie() | MIE_MTIE); #再來允許中斷，才不會有遞迴的重複中斷
+      break;
+    case 11:
+      lib_puts("external interruption!\n"); #外部中斷
+      break;
+    default:
+      lib_puts("unknown async exception!\n");
+      break;
+    }
+  }
 
 ```
-2.01.47
+### mini-riscv-os/05-Preemptive0/user.c:
+### 這邊沒甚麼改變，唯一就是不需要緩而已
+```
+lib_puts("Task1: Created!\n");
+	while (1)
+	{
+		lib_puts("Task1: Running...\n");
+		lib_delay(1000);
+	}
+```
+
+### mini-riscv-os/05-Preemptive0/os.c:
+### 其差異在於把時間中斷其中一部分改放在trap裡去執行，原本是只有時間中斷timer_init()，但為了可以模組化，且可以去支援除了時間中斷之外的中斷，因此就放入到trap
+### 但實際上還是只有時間中斷，除了 timer interrupt以外都沒用，但此範例還是分成2個模組來使用
+```
+void os_start() #設定使用者形程、中斷向量、時間中斷等
+{
+	lib_puts("OS start\n");
+	user_init();
+	trap_init();
+	timer_init(); // start timer interrupt ...
+}
+```
+## 05-Preemptive :
+### 最大改變是多一個trap模組，因為中斷不只有時間中斷，還有可能有其他中斷，例如:軟體中斷、外部中斷等，而外部中斷是指假設有個案例是按了鍵盤，因此要通知CPU說有人按了鍵盤要給予反硬，原因可能是有輸出入的中斷或是網路方面的中斷等，這些就是外部中斷，一開始提到了時間中斷比較偏向內部的，
+
+### mini-riscv-os/05-Preemptive0/sys.s:
+### 其重點是在trap_handler中，根據mcause才知道說是timer中斷還是其他中斷
+### 進入到trap_handler 裡，會設定retrun_pc，接著又會設定到mepc，最後mret時，就會跳回給作業系統
+```
+trap_vector:  #中斷發生時，會先儲存暫存器，再呼叫trap_handler，最後再恢復
+	# save context(registers).
+	csrrw	t6, mscratch, t6	# swap t6 and mscratch
+        reg_save t6
+	csrw	mscratch, t6
+	# call the C trap handler in trap.c
+	csrr	a0, mepc
+	csrr	a1, mcause
+	call	trap_handler #會設定retrun_pc
+
+	# trap_handler will return the return address via a0.
+	csrw	mepc, a0 #回傳回去的retrun值會放在a0，然後又把a0寫成mepc，
+
+	# load context(registers).
+	csrr	t6, mscratch
+	reg_load t6
+	mret  #mret後會跳回mepc那邊，所以執行mret時，就會跳回kernel，也就完成把控制權交給kernel了
+```
+
+

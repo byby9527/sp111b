@@ -104,9 +104,79 @@ int main() {
   printf("*p=%c x=%c\n", *p, x);  #最後印出結果應該是p=b，x=b
 }
 ```
+
+### 此圖是分頁分段機制，先由CPU經過邏輯位置，這個邏輯位置會被分頁分段機制insert到實體位置，在這insert過程中，會把整個記憶體切成一小塊的，分配給現在所執行的程式，這每一塊上面有個屬性，該屬性會寫說現在是唯讀的還是可寫的，如果data段被放在唯讀區域，但卻自行修改，這時候就會引發作業系統的保護機制，因而引發中斷，導致程式整個掛掉，放在哪個區段是由編譯器跟作業系統來決定的
 ![](https://drive.google.com/uc?export=view&id=1pSPzdG4AYJa3YgL7U3EtOdfoptZWD64M)
 
 
+### 02-軟體/02-編譯器/01-diy/00-gen/rlib.c:
+```
+int randInt(int n) {     #從0到n-1挑選一個出來
+  return rand() % n;
+}
+int randChar(char *set) {   #從一串字裡面挑選一個字元出來
+  int len = strlen(set);
+  int i = rand()%len;
+  return set[i];
+}
+
+// int randSelect(char* array, int size):隨機傳回 array 中的一個字串
+// 用法:randSelect({"dog", "cat"}, 2) 會傳回二選一的字串
+char *randSelect(char* array[], int size) {    #從array[]陣列裡面，隨機挑一個出來
+  int i = rand()%size;
+  return array[i];
+}
+
+void timeSeed() {
+  long ltime = time(NULL); #呼叫時鐘函數
+  srand(ltime); #用時鐘取得的時間設定亂數種子
+}
+
+```
+
+### 02-軟體/02-編譯器/01-diy/00-gen/genExp.c:
+```
+int main(int argc, char * argv[]) {
+    timeSeed();
+    // E();
+    int i;
+    for (i=0; i<10; i++) {
+        E(); #主程式每次產生10次E，10次運算式，並印出來
+        printf("\n");
+    }
+}
+
+// E=T ([+-] T)*  #可能是會繼續產生下去或是不會繼續產生下去
+void E() {
+    T();
+    while (randInt(10) < 3) { #會繼續產生下去的機會是0.3，不繼續產生下去的機會是0.7
+       printf("%c", randChar("+-")); #如果有產生下一個，便會從+-挑選一個出來
+       T(); #繼續產生T()
+    }
+}
+
+// T=F ([*/] F)?
+void T() {
+    F(); #產生F()或者F*/F，*/最多可一次
+    if (randInt(10) < 7) {
+        printf("%c", randChar("*/"));
+        F();
+    }
+}
+
+// F=[0-9] | (E)
+void F() {
+    if (randInt(10) < 8) {
+        printf("%c", randChar("0123456789")); 可能會產生0123456789其中一個字
+    } else {
+        printf("("); 
+        E();  #或是產生一個括號後面加 E()再接一個括號
+        printf(")");
+    }
+}
+
+```
+第4周編譯器 
 
 ## 02-軟體/07-系統程式/08-ipcchat/05-udp/chat2.c:
 

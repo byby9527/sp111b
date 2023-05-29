@@ -3,10 +3,108 @@
 int var = 4;
 int *ptr = &var;
 ```
+### 這個代碼片段中，val 的值為 4，因為 *ptr 的值為 var，也就是 4。
+```
+int var = 4;
+int *ptr = &var;
+int val = *ptr; 
+```
 
-第2周 9.25
+### 當要取內容時，要用*加變數名稱，要取位置時，要用&加變數名稱，要指定東西到它的內容要用*加指標名稱
+```
+int main() {
+    int num = 4;
+    int *p = &num;   // 將 p 指向 num 的記憶體位置
+    
+    printf("num = %d\n", num);
+    printf("*p = %d\n", *p);  // 透過指標 p 存取 num 的值
+    *p = 20;                   // 透過指標 p 修改 num 的值
+    printf("num = %d\n", num);
+    
+    return 0;
+}
+```
 
+### 使用指標傳遞參數:
+```
+void swap(int *a, int *b) {  // 使用指標作為函式參數
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
 
+int main() {
+    int x = 10, y = 20;
+    printf("x = %d, y = %d\n", x, y);
+    swap(&x, &y);             // 將 x, y 的位址傳入 swap 函式
+    printf("x = %d, y = %d\n", x, y);
+    return 0;
+}
+```
+### 使用指標來存取陣列元素作為陣列的索引:
+```
+int main() {
+    int arr[5] = {1, 2, 3, 4, 5};
+    int *p = arr;    // 將 p 指向陣列的第一個元素
+    
+    for(int i = 0; i < 5; i++) {
+        printf("%d ", *(p+i));  // 使用指標存取陣列元素
+    }
+    
+    return 0;
+}
+```
+### 使用 malloc 函式動態地配置記憶體，並將指標指向這塊記憶體，這樣可以在程式執行過程中動態地新增或刪除記憶體空間:
+```
+int main() {
+    int n;
+    printf("Enter the size of array: ");
+    scanf("%d", &n);
+    
+    int *p = (int *)malloc(n * sizeof(int));   // 動態配置記憶體
+    
+    for(int i = 0; i < n; i++) {
+        *(p+i) = i+1;                          // 使用指標存取陣列元素
+    }
+    
+    for(int i = 0; i < n; i++) {
+        printf("%d ", *(p+i));
+    }
+    
+    free(p);   // 釋放記憶體空間
+    
+    return 0;
+}
+```
+### 用指標來宣告函數指標:
+```
+
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int (*p)(int, int);   // 宣告一個指向函式的指標變數
+    p = &add;             // 將指標指向 add 函式
+    
+    int sum = (*p)(10, 20);   // 使用指標呼叫函式
+    
+    printf("sum = %d\n", sum);
+    
+    return 0;
+}
+```
+
+### A1-C語言/01-trap/pointer1.c:
+```
+int main() {
+  char x = 'a';
+  char *p = &x;
+  *p='b';
+  printf("*p=%c x=%c\n", *p, x);  #最後印出結果應該是p=b，x=b
+}
+```
+![](https://drive.google.com/uc?export=view&id=1pSPzdG4AYJa3YgL7U3EtOdfoptZWD64M)
 
 
 

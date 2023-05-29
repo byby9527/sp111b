@@ -222,6 +222,16 @@ stacks:
     .skip STACK_SIZE                # 分配堆疊空間
 ```
 
+### mini-riscv-os/03-MultiTasking/sys.s:
+```
+sys_switch:
+        ctx_save a0  # a0 => struct context *old  #a0指第0個參數，把目前CPU那些暫存器都存到a0(old)
+        ctx_load a1  # a1 => struct context *new  #a1指第1個參數，把new載入，等於新的把整套換掉
+        ret          # pc=ra; swtch to new task (new->ra) # ret會採取pc=ra此動作，前面2個動作把整套換掉，因此ra是新的，pc等於ra，會跳到新的之前返回位置去，就會切換過去
+```
+
+
+
 ## 04-TimerInterrupt:
 ### Build & Run:
 ### 此程式是顯示出timer_handler(時間中斷)從1開始直接按下Ctrl-A and then X才會離開程式，每個間隔約0.1秒，以達到實現時間中斷的目的
@@ -256,7 +266,7 @@ int os_main(void)
 ```
 
 ### mini-riscv-os/04-TimerInterrupt/timer.c:
-### 
+### 有分三種模式，機器、使用者、特權等模式，此程式是執行在機器模式下，把機器模式裡的時間中斷向量改成sys_timer
 ```
 #include "timer.h"
 
@@ -282,7 +292,7 @@ void timer_init()
 
 static int timer_count = 0;
 
-reg_t timer_handler(reg_t epc, reg_t cause)
+reg_t timer_handler(reg_t epc, reg_t cause)  #時間中斷會透過sys_timer執行timer_handler
 {
   reg_t return_pc = epc;
   // disable machine-mode timer interrupts.
@@ -295,5 +305,68 @@ reg_t timer_handler(reg_t epc, reg_t cause)
   return return_pc;
 }
 ```
+### mini-riscv-os/04-TimerInterrupt/sys.s:
+### 原本是叫sys_switch，當時間中斷到時，會先讀取機器模式程式計數器備份和中斷原因，並呼叫timer_handler(c語言的函數)，再設定成mepc並還原，呼叫mret時會跳到原來的中斷
+```
+sys_timer:
+	# call the C timer_handler(reg_t epc, reg_t cause)
+	csrr	a0, mepc     #mepc=機器模式程式計數器備份
+	csrr	a1, mcause   #mcause=機器中斷原因
+	call	timer_handler  
 
-49.00
+	# timer_handler will return the return address via a0.
+	csrw	mepc, a0    #設定成mepc，並還原
+
+	mret # back to interrupt location (pc=mepc)   #當中斷時會自動儲存mepc，也就是呼叫mret時，pc=mepc，就會跳到原本被中斷的位置
+```
+### mini-riscv-os/04-TimerInterrupt/riscv.h:
+```
+static inline reg_t r_mhartid()
+{
+  reg_t x;
+  asm volatile("csrr %0, mhartid" : "=r" (x) );  #asm指此括號裡面都是組合語言，volatile指這些組合語言可能會造成暫存器突然的改變，這些暫存器不能假設如果編譯器沒有動他就不會自己動，csrr函數指把內容讀取到x裡面
+  return x;
+}
+
+
+static inline reg_t r_mstatus()  #r_mstatus指在讀取機器狀態
+{
+  reg_t x;
+  asm volatile("csrr %0, mstatus" : "=r" (x) );
+  return x;
+}
+
+
+static inline void w_mstatus(reg_t x)  # w_mstatus指在寫入機器狀態
+{
+  asm volatile("csrw mstatus, %0" : : "r" (x));  
+}
+
+
+static inline void w_mepc(reg_t x) #w_mepc指在寫入機器模式程式計數器備份，epc指當中斷時程式計數器會先丟給epc，等中斷完成後會把epc塞還給epc再跳回來
+{
+  asm volatile("csrw mepc, %0" : : "r" (x));
+}
+
+
+static inline reg_t r_mepc()  # r_mepc指在讀取機器模式程式計數器備份
+{
+  reg_t x;
+  asm volatile("csrr %0, mepc" : "=r" (x));
+  return x;
+}
+
+static inline void w_mscratch(reg_t x)  #mscratch指時間中斷臨時變數儲存的地方
+{
+  asm volatile("csrw mscratch, %0" : : "r" (x));
+}
+
+
+static inline void w_mtvec(reg_t x)  #mtvec指中斷向量，中斷向量儲存一些中斷位置
+{
+  asm volatile("csrw mtvec, %0" : : "r" (x));
+}
+剩下的部分都是為了暫存器的某些位元而使用的
+```
+
+1.13.00

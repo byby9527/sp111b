@@ -235,6 +235,7 @@ sys_switch:
 ## 04-TimerInterrupt:
 ### Build & Run:
 ### 此程式是顯示出timer_handler(時間中斷)從1開始直接按下Ctrl-A and then X才會離開程式，每個間隔約0.1秒，以達到實現時間中斷的目的
+### 主要目的為示範如何設定中斷向量，設定時間中斷使它固定時間發生。
 ```
 $ make
 riscv64-unknown-elf-gcc -nostdlib -fno-builtin -mcmodel=medany -march=rv32ima -mabi=ilp32 -T os.ld -o os.elf start.s sys.s lib.c timer.c os.c
@@ -252,6 +253,7 @@ QEMU: Terminated
 
 ### mini-riscv-os/04-TimerInterrupt/os.c:
 ### 此程式會產生無窮迴圈，一直顯示timer_handler:
+### 這邊無窮迴圈什麼事情都沒做但會印出來，是因為有設定中斷函數、中斷時間，中斷時間到了會中斷一次，就會在設定下次的中斷時間，會不斷延續同樣的動作
 ```
 #include "os.h"
 
@@ -278,10 +280,10 @@ void timer_init()
   int id = r_mhartid();
 
   // ask the CLINT for a timer interrupt.
-  *(reg_t*)CLINT_MTIMECMP(id) = *(reg_t*)CLINT_MTIME + interval;
+  *(reg_t*)CLINT_MTIMECMP(id) = *(reg_t*)CLINT_MTIME + interval; #把下次中斷的時間設定好
 
   // set the machine-mode trap handler.
-  w_mtvec((reg_t)sys_timer);   //然後再呼叫timer_handle
+  w_mtvec((reg_t)sys_timer);   #下次中斷要做哪個函數設定好，設定好後，時間到就會中斷，就會把mepc儲存起來，再跳到sys_timer(組合語言那邊)。
 
   // enable machine-mode interrupts.
   w_mstatus(r_mstatus() | MSTATUS_MIE);
@@ -290,27 +292,32 @@ void timer_init()
   w_mie(r_mie() | MIE_MTIE);
 }
 
-static int timer_count = 0;
+static int timer_count = 0;  
 
 reg_t timer_handler(reg_t epc, reg_t cause)  #時間中斷會透過sys_timer執行timer_handler
 {
-  reg_t return_pc = epc;
+
+  reg_t return_pc = epc; #保存暫存器
   // disable machine-mode timer interrupts.
-  w_mie(~((~r_mie()) | (1 << 7)));
-  lib_printf("timer_handler: %d\n", ++timer_count); //先加再執行，從1開始
+  w_mie(~((~r_mie()) | (1 << 7)));  #禁止中斷
+  lib_printf("timer_handler: %d\n", ++timer_count);  #前面有設定 timer_count = 0 ，每次呼叫timer_handler時，timer_count就會加1，從1開始印
+  #如果這行的程式碼是timer_count++，就會從0開始印，先取值在加
   int id = r_mhartid();
-  *(reg_t *)CLINT_MTIMECMP(id) = *(reg_t *)CLINT_MTIME + interval; //設置下次中斷時間點，中斷時會呼叫sys_timer(第14行)
+  *(reg_t *)CLINT_MTIMECMP(id) = *(reg_t *)CLINT_MTIME + interval; //設置下次中斷時間點，中斷時會呼叫sys_timer，繼續一樣的動作，這樣才會連續間隔時間印出timer_handler
   // enable machine-mode timer interrupts.
-  w_mie(r_mie() | MIE_MTIE);
+  w_mie(r_mie() | MIE_MTIE);   #允許中斷
+  #至於為甚麼要禁止中斷再來允許中斷，此用意是不希望在處理中斷的時間之內又發生中斷，如果在處理中斷的時間又發生中斷，這種就做可從入式中斷，但在這程式是不允許的，因此要處理中斷的時候，一開始就要先禁止中斷，等到最後在允許中斷。
   return return_pc;
 }
 ```
 ### mini-riscv-os/04-TimerInterrupt/sys.s:
 ### 原本是叫sys_switch，當時間中斷到時，會先讀取機器模式程式計數器備份和中斷原因，並呼叫timer_handler(c語言的函數)，再設定成mepc並還原，呼叫mret時會跳到原來的中斷
+### 主要目的為保存暫存器，並呼叫c語言的timer_handler，在恢復暫存器，最後就返回，唯一有動作的地方是會在timer_handler這部分執行。
 ```
 sys_timer:
+
 	# call the C timer_handler(reg_t epc, reg_t cause)
-	csrr	a0, mepc     #mepc=機器模式程式計數器備份
+	csrr	a0, mepc     #mepc=機器模式程式計數器備份，mepc是硬體發生中斷所產生的，但在哪裡發生中斷式不一定的
 	csrr	a1, mcause   #mcause=機器中斷原因
 	call	timer_handler  
 
@@ -369,4 +376,4 @@ static inline void w_mtvec(reg_t x)  #mtvec指中斷向量，中斷向量儲存�
 剩下的部分都是為了暫存器的某些位元而使用的
 ```
 
-1.13.00
+

@@ -1,3 +1,3 @@
 output: main.c datetime.c
-gcc -o main main.c datetime.c
+gcc main.c datetime.c -o main
 ./main

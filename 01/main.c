@@ -3,7 +3,8 @@
 
 int main(void)
 {
-printCurrentTime();
-printFormattedTime("%Y-%m-%d %H:%M:%S");
-return 0;
+    printCurrentTime();
+    printFormattedTime("%Y-%m-%d %H:%M:%S");
+    
+    return 0;
 }

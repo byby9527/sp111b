@@ -678,6 +678,117 @@ trap_vector:  #中斷發生時，會先儲存暫存器，再呼叫trap_handler�
 	mret  #mret後會跳回mepc那邊，所以執行mret時，就會跳回kernel，也就完成把控制權交給kernel了
 ```
 
+
+
+```
+struct devsw devsw[NDEV];  #此結構在file.c裡面名叫NDEV
+struct {
+  struct spinlock lock;
+  struct file file[NFILE];
+} ftable;
+
+//跟檔案表相關的函數都會集中在這裡，這邊也是作業系統進來必須執行的函數
+void
+fileinit(void)
+{
+  initlock(&ftable.lock, "ftable");  //要先設定一個鎖，避免之後會出現競爭的情況發生
+}
+
+// Allocate a file structure.
+struct file*
+filealloc(void)  //filealloc會分配檔案，會先從檔案表開頭執行到尾部，在執行過程中間如果看到有任何一個檔案表被引用的次數為0(表示無人使用)，就會設定成1(拿來使用)且回傳回來
+{
+  struct file *f;
+
+  acquire(&ftable.lock);
+  for(f = ftable.file; f < ftable.file + NFILE; f++){
+    if(f->ref == 0){
+      f->ref = 1;
+      release(&ftable.lock);
+      return f;
+    }
+  }
+  release(&ftable.lock);
+  return 0;
+}
+```
+
+
+### 當我們呼叫 ``` write(1, buf, n) ``` 時，會執行下列組合語言指令
+```
+write:
+ li a7, SYS_write
+ ecall
+ ret
+```
+
+### 並且呼叫後會放在以下syscalls的陣列
+```
+static uint64 (*syscalls[])(void) = {
+[SYS_fork]    sys_fork,
+[SYS_exit]    sys_exit,
+[SYS_wait]    sys_wait,
+[SYS_pipe]    sys_pipe,
+[SYS_read]    sys_read,
+[SYS_kill]    sys_kill,
+[SYS_exec]    sys_exec,
+[SYS_fstat]   sys_fstat,
+[SYS_chdir]   sys_chdir,
+[SYS_dup]     sys_dup,
+[SYS_getpid]  sys_getpid,
+[SYS_sbrk]    sys_sbrk,
+[SYS_sleep]   sys_sleep,
+[SYS_uptime]  sys_uptime,
+[SYS_open]    sys_open,
+[SYS_write]   sys_write,
+[SYS_mknod]   sys_mknod,
+[SYS_unlink]  sys_unlink,
+[SYS_link]    sys_link,
+[SYS_mkdir]   sys_mkdir,
+[SYS_close]   sys_close,
+};
+```
+
+
+### 一旦呼叫read函數就會跳到consoleread函數去執行
+```
+void
+consoleinit(void)
+{
+  initlock(&cons.lock, "cons");
+
+  uartinit();
+
+  // connect read and write system calls
+  // to consoleread and consolewrite.
+  devsw[CONSOLE].read = consoleread; // CONSOLE 在 kernel/file.h 定義為 1
+  devsw[CONSOLE].write = consolewrite;
+}
+
+```
+
+### consolewrite() 會連續呼叫 n 次的 uartputc(c) 去輸出該字串
+
+```
+//
+// user write()s to the console go here.
+//
+int
+consolewrite(int user_src, uint64 src, int n)
+{
+  int i;
+
+  for(i = 0; i < n; i++){
+    char c;
+    if(either_copyin(&c, user_src, src+i, 1) == -1)
+      break;
+    uartputc(c);
+  }
+
+  return i;
+}
+```
+
 ## 分頁表的優點:
 
 ### 1.簡化數據處理:能夠輕鬆處理大型數據集，而無需一次性加載所有數據
@@ -687,9 +798,6 @@ trap_vector:  #中斷發生時，會先儲存暫存器，再呼叫trap_handler�
 ## xv6硬碟的分類:
 ### inode塊、數據塊
 ### 每個inode塊包含一個inode（索引節點），用於存儲文件的元數據，如文件類型、文件大小等。數據塊用於存儲文件的實際內容。
-(![image](https://github.com/byby9527/sp111b/assets/99935115/91a8c2a0-12f2-4d29-aea4-e89d656a2cb1)
 
-
-
-
-
+### 硬體將 logical address 轉成 physical address:
+![image](https://github.com/byby9527/sp111b/assets/99935115/91a8c2a0-12f2-4d29-aea4-e89d656a2cb1)

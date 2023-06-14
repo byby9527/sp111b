@@ -688,7 +688,8 @@ trap_vector:  #中斷發生時，會先儲存暫存器，再呼叫trap_handler�
 ### inode塊、數據塊
 ### 每個inode塊包含一個inode（索引節點），用於存儲文件的元數據，如文件類型、文件大小等。數據塊用於存儲文件的實際內容。
 
-![](https://drive.google.com/uc?export=view&id=1g3B2mEe5sDXsyGCTzo4h1GYrImXki_8O)
+![]((https://img.onl/ZxMAH))
+
 
 
 

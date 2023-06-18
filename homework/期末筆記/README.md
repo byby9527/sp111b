@@ -95,6 +95,38 @@ int main() {
 }
 ```
 
+## gcc 語法:
+
+```
+ gcc hi.c -0 hi
+ ./hi
+```
+
+## C4編譯器的主要元件及其功能:
+### 詞法分析器（Lexer）、語法分析器（Parser）、代碼生成器（Code Generator）等
+### 範例:
+
+```
+//計算兩個整數的和
+#include <stdio.h>
+int main() {
+    int num1 = 5;
+    int num2 = 10;
+    int sum = num1 + num2;
+    printf("The sum is: %d\n", sum);
+    return 0;
+}
+
+```
+
+## OpenAI API:
+### 是由 OpenAI 提供的一個人工智慧應用程式介面，它可以讓開發者與 OpenAI 的強大語言模型進行互動。透過這個 API，開發者可以使用程式碼向模型提出問題或給予指令，並獲得模型的回答或生成的文本。
+
+
+
+
+
+
 ### A1-C語言/01-trap/pointer1.c:
 ```
 int main() {
@@ -174,6 +206,24 @@ void F() {
         printf(")");
     }
 }
+
+```
+
+
+## 如何去包含其他檔案:
+
+```
+#include <…> : 系統預設的函式庫資料夾
+#include "…" : 自己目錄的資料夾
+```
+
+
+## MAC terminal 中文編碼問題解決:
+### 修改终端的預設編碼、修改终端字體
+### 使用UTF-8编码:
+```
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
 
 ```
 
@@ -801,3 +851,8 @@ consolewrite(int user_src, uint64 src, int n)
 
 ### 硬體將 logical address 轉成 physical address:
 ![image](https://github.com/byby9527/sp111b/assets/99935115/91a8c2a0-12f2-4d29-aea4-e89d656a2cb1)
+
+
+
+
+
